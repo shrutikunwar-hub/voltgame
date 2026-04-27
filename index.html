@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>VOLT Nova — Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --blue:#1B4FD8;--cyan:#00D4FF;--yellow:#FFD600;--pink:#FF3CAC;
+  --green:#00E676;--orange:#FF6B35;--red:#FF4444;--purple:#9B5DE5;
+  --dark:#0A0A14;--dark2:#12121F;--dark3:#1A1A2E;--card:#16162A;
+  --text:#F0EFF8;--text2:#9B9AB8;--text3:#5C5B78;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --radius:14px;--radius-sm:10px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.bg-orbs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.15;animation:drift 12s ease-in-out infinite alternate;}
+.orb1{width:400px;height:400px;background:var(--blue);top:-100px;left:-100px;}
+.orb2{width:300px;height:300px;background:var(--pink);top:40%;right:-60px;animation-delay:-4s;}
+.orb3{width:280px;height:280px;background:var(--cyan);bottom:-60px;left:30%;animation-delay:-8s;}
+@keyframes drift{0%{transform:translate(0,0) scale(1);}100%{transform:translate(20px,15px) scale(1.06);}}
+.wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:1.5rem 1rem 5rem;}
+.screen{display:none;}.screen.active{display:block;}
+
+/* Typography */
+h1{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;line-height:1.1;background:linear-gradient(135deg,var(--cyan),var(--blue),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+.label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;}
+
+/* VOLT car */
+.volt-wrap{display:flex;justify-content:center;margin:1rem 0;}
+.volt-car{position:relative;animation:float 3s ease-in-out infinite;cursor:pointer;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.volt-car:hover{animation:none;transform:scale(1.03);}
+.speech-bubble{position:absolute;top:-52px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:6px 12px;font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.speech-bubble::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid var(--border2);}
+.volt-car:hover .speech-bubble{opacity:1;}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem;margin-bottom:0.9rem;}
+.volt-bubble{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem;margin-bottom:0.9rem;font-size:14px;line-height:1.75;position:relative;overflow:hidden;}
+.volt-bubble::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(to bottom,var(--cyan),var(--blue));}
+
+/* Inputs */
+input,select{width:100%;background:var(--dark3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 14px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);margin-bottom:10px;outline:none;transition:border-color 0.2s;}
+input:focus,select:focus{border-color:var(--cyan);}
+select option{background:var(--dark3);}
+
+/* Buttons */
+button{font-family:'DM Sans',sans-serif;background:transparent;border:1px solid var(--border2);border-radius:24px;padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;color:var(--text2);transition:all 0.18s cubic-bezier(0.34,1.56,0.64,1);position:relative;overflow:hidden;}
+button:hover{background:var(--dark3);color:var(--text);transform:translateY(-1px);}
+button:active{transform:scale(0.95);}
+button:disabled{opacity:0.35;pointer-events:none;}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;border:none;border-radius:var(--radius-sm);width:100%;padding:13px;font-size:15px;font-weight:600;font-family:'Syne',sans-serif;letter-spacing:0.03em;margin-top:8px;box-shadow:0 4px 20px rgba(0,212,255,0.25);}
+.btn-primary:hover{opacity:0.92;transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,212,255,0.35);color:#fff;}
+.btn-primary:disabled{opacity:0.35;pointer-events:none;transform:none;}
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.25);transform:scale(0);animation:ripple-go 0.5s linear;pointer-events:none;}
+@keyframes ripple-go{to{transform:scale(4);opacity:0;}}
+
+/* Progress */
+.progress-bar{height:3px;background:var(--dark3);border-radius:2px;margin-bottom:1.25rem;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(to right,var(--blue),var(--cyan));border-radius:2px;transition:width 0.5s cubic-bezier(0.4,0,0.2,1);}
+
+/* Timer */
+.timer-wrap{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.timer{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--cyan);}
+.timer.warning{color:var(--orange);animation:pulse-timer 0.5s ease infinite alternate;}
+.timer.danger{color:var(--red);animation:pulse-timer 0.3s ease infinite alternate;}
+@keyframes pulse-timer{from{opacity:1;}to{opacity:0.5;}}
+.round-badge{background:rgba(0,212,255,0.15);color:var(--cyan);font-size:11px;font-weight:700;font-family:'Syne',sans-serif;padding:4px 12px;border-radius:20px;border:1px solid rgba(0,212,255,0.25);}
+
+/* Word grid */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0.9rem 0;}
+.word{background:var(--dark3);border:1px solid var(--border2);border-radius:8px;padding:10px 3px;text-align:center;font-family:'Syne',sans-serif;font-size:10px;font-weight:700;cursor:pointer;color:var(--text2);transition:all 0.15s;user-select:none;letter-spacing:0.03em;}
+.word:hover{background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.4);color:var(--cyan);transform:translateY(-2px);}
+.word.selected{background:rgba(27,79,216,0.35);border-color:var(--blue);color:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,0.2);}
+.word.correct{background:rgba(0,230,118,0.2);border-color:var(--green);color:var(--green);}
+.word.wrong{background:rgba(255,68,68,0.15);border-color:var(--red);color:var(--red);}
+.word.assassin{background:rgba(255,107,53,0.2);border-color:var(--orange);color:var(--orange);}
+.word.disabled{opacity:0.5;pointer-events:none;}
+@keyframes word-pop{0%{transform:scale(1);}40%{transform:scale(1.1) translateY(-3px);}100%{transform:scale(1);}}
+.word-popping{animation:word-pop 0.25s cubic-bezier(0.34,1.56,0.64,1);}
+
+/* Clue box */
+.clue-box{background:linear-gradient(135deg,rgba(27,79,216,0.2),rgba(0,212,255,0.1));border:1px solid rgba(0,212,255,0.3);border-radius:var(--radius);padding:1rem 1.25rem;margin:0.9rem 0;}
+.clue-word{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--cyan);letter-spacing:0.05em;}
+.clue-num{font-size:13px;color:var(--text2);margin-top:4px;}
+
+/* Sel display */
+.sel-display{font-size:12px;color:var(--text3);margin:5px 0;min-height:18px;}
+
+/* Reaction */
+.reaction{padding:0.9rem 1.1rem;border-radius:var(--radius);font-size:13px;line-height:1.6;margin:0.9rem 0;border:1px solid;}
+.reaction.good{background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:#80FFB8;}
+.reaction.bad{background:rgba(255,68,68,0.1);border-color:rgba(255,68,68,0.3);color:#FF9999;}
+.reaction.neutral{background:rgba(255,255,255,0.04);border-color:var(--border);color:var(--text);}
+.reaction.assassin-hit{background:rgba(255,107,53,0.12);border-color:rgba(255,107,53,0.35);color:#FFB08A;}
+
+/* Framework reveal */
+.framework-box{background:linear-gradient(135deg,rgba(155,93,229,0.15),rgba(27,79,216,0.15));border:1px solid rgba(155,93,229,0.35);border-radius:var(--radius);padding:1rem 1.25rem;margin:0.9rem 0;}
+.framework-name{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--purple);margin-bottom:4px;}
+.framework-line{font-size:13px;color:var(--text2);line-height:1.6;}
+
+/* Score */
+.score-big{font-family:'Syne',sans-serif;font-size:56px;font-weight:800;text-align:center;background:linear-gradient(135deg,var(--yellow),var(--orange),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;padding:6px 0;}
+.score-label{text-align:center;font-size:13px;color:var(--text2);margin-bottom:0.9rem;}
+
+/* Team badge */
+.team-badge{display:inline-block;background:rgba(0,212,255,0.15);color:var(--cyan);font-size:11px;font-weight:700;font-family:'Syne',sans-serif;padding:4px 12px;border-radius:20px;border:1px solid rgba(0,212,255,0.25);margin-bottom:0.75rem;}
+
+/* Waiting screen */
+.waiting-pulse{display:flex;align-items:center;justify-content:center;gap:6px;margin:1rem 0;}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:dot-pulse 1.2s ease infinite;}
+.dot:nth-child(2){animation-delay:0.2s;background:var(--blue);}
+.dot:nth-child(3){animation-delay:0.4s;background:var(--pink);}
+@keyframes dot-pulse{0%,100%{transform:scale(0.7);opacity:0.4;}50%{transform:scale(1.2);opacity:1;}}
+
+/* Stat row */
+.stat-row{display:flex;gap:8px;margin:0.9rem 0;}
+.stat-card{flex:1;background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 8px;text-align:center;}
+.stat-num{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* Eliminated */
+.eliminated-box{background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);border-radius:var(--radius);padding:1.25rem;text-align:center;margin:1rem 0;}
+.eliminated-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--red);margin-bottom:8px;}
+
+/* Grid legend */
+.grid-legend{display:none;gap:10px;flex-wrap:wrap;margin:0 0 0.5rem;font-size:11px;color:var(--text3);}
+.grid-legend span{display:flex;align-items:center;gap:4px;}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+
+/* Confetti */
+@keyframes confetti-fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1;}100%{transform:translateY(120px) rotate(720deg);opacity:0;}}
+.confetti-piece{position:fixed;width:7px;height:7px;border-radius:2px;animation:confetti-fall 1.5s ease-in forwards;pointer-events:none;z-index:999;}
+
+/* Game over */
+.game-over-title{font-family:'Syne',sans-serif;font-weight:800;font-size:40px;text-align:center;background:linear-gradient(135deg,var(--orange),var(--red),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shake-title 0.5s ease;}
+@keyframes shake-title{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px) rotate(-2deg);}40%{transform:translateX(8px) rotate(2deg);}60%{transform:translateX(-5px);}80%{transform:translateX(5px);}}
+.assassin-reveal{background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.4);border-radius:var(--radius);padding:1.1rem 1.25rem;margin:0.9rem 0;text-align:center;}
+.assassin-word-big{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--orange);letter-spacing:0.1em;display:block;margin:6px 0 4px;}
+
+em{font-style:italic;}strong{font-weight:600;}
+</style>
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ─── PASTE YOUR FIREBASE CONFIG HERE ─────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAe_wA6iyDns8GekX_YWlgaAMLxAxvR7kU",
+  authDomain: "voltgame-f88fd.firebaseapp.com",
+  databaseURL: "https://voltgame-f88fd-default-rtdb.firebaseio.com",
+  projectId: "voltgame-f88fd",
+  storageBucket: "voltgame-f88fd.firebasestorage.app",
+  messagingSenderId: "1065456694703",
+  appId: "1:1065456694703:web:7c3adf49f0b9f625546b5a"
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+window._fbDb = db;
+window._fbRef = ref;
+window._fbSet = set;
+window._fbGet = get;
+window._fbOnValue = onValue;
+window._firebaseReady = true;
+console.log("Firebase ready");
+</script>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+</div>
+<div class="wrap">
+
+<!-- REGISTER -->
+<div id="screen-register" class="screen active">
+  <div style="margin-bottom:1.25rem;text-align:center;">
+    <div class="label">Strategy Game — Player</div>
+    <h1>I Was VOLT Nova...</h1>
+    <div style="font-size:14px;color:var(--text2);margin-top:4px;">Here's How I Died.</div>
+  </div>
+  <div class="volt-wrap">
+    <div class="volt-car" onclick="honk('reg')">
+      <div class="speech-bubble">Ready to solve my death?</div>
+      VOLT_SVG_REG
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">VOLT Nova, introducing himself</div>
+    <div style="font-size:14px;line-height:1.8;color:var(--text2);">
+      Hi. I'm VOLT Nova. <em>Yes, that</em> VOLT Nova.<br><br>
+      $8 billion valuation. Fastest EV on the road. The kind of car that makes people stop and say "wait, what is that?"<br><br>
+      I'm also dead. Strategically.<br><br>
+      Today I'm going to narrate my own downfall — chapter by chapter — and you're going to figure out what I did wrong. <em>If you're smart enough.</em>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Who are you?</div>
+    <input type="text" id="player-name" placeholder="Your name" maxlength="30"/>
+    <select id="team-select">
+      <option value="">Pick your team...</option>
+      <option value="Team Rivian">🌲 Team Rivian</option>
+      <option value="Team BYD">🐉 Team BYD</option>
+      <option value="Team Lucid">💎 Team Lucid</option>
+      <option value="Team NIO">🌊 Team NIO</option>
+      <option value="Team Polestar">⭐ Team Polestar</option>
+    </select>
+    <button class="btn-primary" onclick="register()">Enter the crime scene →</button>
+  </div>
+  <div class="card" style="font-size:13px;color:var(--text2);line-height:1.7;">
+    <div class="label">How this works</div>
+    Each round I'll tell you what happened. Then you get a one-word clue and a grid of 16 words. Pick the ones that match.<br><br>
+    <strong style="color:var(--green)">Correct word = +2 pts</strong><br>
+    <strong style="color:var(--red)">Wrong word = −1 pt</strong><br>
+    <strong style="color:var(--orange)">Assassin word = eliminated. Game over for you.</strong><br><br>
+    <em style="color:var(--text3);">One word per grid is a hidden trap. You won't know which one until you submit.</em>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div id="screen-waiting" class="screen">
+  <div style="text-align:center;margin:2rem 0 1rem;">
+    <div class="label">You're in!</div>
+    <div id="waiting-team" class="team-badge"></div>
+    <div style="font-size:22px;font-weight:600;margin:0.5rem 0;" id="waiting-name"></div>
+    <div style="font-size:14px;color:var(--text2);">You're in. Now we wait for your teacher to start the investigation.</div>
+  </div>
+  <div class="volt-wrap">
+    <div class="volt-car" onclick="honk('wait')">
+      <div class="speech-bubble">I'm nervous. Don't tell anyone.</div>
+      VOLT_SVG_WAIT
+    </div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;font-size:13px;color:var(--text2);line-height:1.7;margin-top:0.5rem;">
+    <strong style="color:var(--cyan);">While you wait —</strong><br>
+    I'm about to walk you through the four worst decisions of my life. Discuss with your team. Pick together. And maybe — <em>maybe</em> — you'll figure out what I should have done differently.<br><br>
+    <span style="color:var(--text3);">Spoiler: I should have done a lot of things differently.</span>
+  </div>
+</div>
+
+<!-- ROUND -->
+<div id="screen-round" class="screen">
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="timer-wrap">
+    <div class="round-badge" id="round-badge">Round 1 of 4</div>
+    <div class="timer" id="timer">1:30</div>
+  </div>
+  <div class="volt-wrap" style="margin:0.5rem 0;">
+    <div class="volt-car" onclick="honk('round')">
+      <div class="speech-bubble">HONK</div>
+      VOLT_SVG_ROUND
+    </div>
+  </div>
+  <div class="volt-bubble" id="story-text"></div>
+  <div class="clue-box">
+    <div class="label">This round's clue</div>
+    <div class="clue-word" id="clue-word"></div>
+    <div class="clue-num" id="clue-num"></div>
+    <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5;">
+      The grid has many tempting words — only pick the ones that connect directly to <strong>VOLT's story this round.</strong>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-top:6px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--orange);flex-shrink:0;"></span>
+      One word is a hidden trap. Pick it = eliminated instantly.
+    </div>
+  </div>
+  <div class="grid" id="word-grid"></div>
+  <div class="grid-legend" id="grid-legend">
+    <span><span class="leg-dot" style="background:rgba(0,230,118,0.3);border:1px solid #00E676;"></span>Correct</span>
+    <span><span class="leg-dot" style="background:rgba(255,107,53,0.25);border:1px solid #FF6B35;"></span>Trap (assassin)</span>
+    <span><span class="leg-dot" style="background:rgba(255,68,68,0.2);border:1px solid #FF4444;"></span>Wrong pick</span>
+  </div>
+  <div class="sel-display" id="sel-display"></div>
+  <div style="display:flex;gap:8px;">
+    <button id="submit-btn" onclick="submitAnswer()" disabled style="flex:1;border-radius:10px;border-color:rgba(0,212,255,0.3);color:var(--cyan);">Submit answer</button>
+    <button onclick="clearSelections()">Clear</button>
+  </div>
+  <div id="reaction-box"></div>
+  <div id="framework-box" style="display:none;" class="framework-box">
+    <div class="framework-name" id="framework-name"></div>
+    <div class="framework-line" id="framework-line"></div>
+  </div>
+  <div id="next-wrap" style="display:none;margin-top:0.75rem;">
+    <button class="btn-primary" onclick="nextRound()" id="next-btn">Next round →</button>
+  </div>
+</div>
+
+<!-- ELIMINATED -->
+<div id="screen-eliminated" class="screen">
+  <div style="text-align:center;margin:2rem 0 1rem;">
+    <div class="game-over-title">ELIMINATED</div>
+    <div style="font-size:15px;color:var(--text2);margin-top:8px;line-height:1.6;">You picked the assassin word.<br>In the real Codenames, that's an instant loss. So... same here.</div>
+  </div>
+  <div class="volt-wrap"><div class="volt-car" style="animation:none;" onclick="honk('elim')">VOLT_SVG_ELIM</div></div>
+  <div style="text-align:center;font-size:13px;color:var(--text3);font-style:italic;margin:0.5rem 0 1rem;">"I know how this feels. I walked into traps too. We're basically the same."<br>— VOLT Nova</div>
+  <div class="assassin-reveal">
+    <div class="label">The trap word was</div>
+    <span class="assassin-word-big" id="elim-assassin-word"></span>
+    <div style="font-size:13px;color:var(--text2);margin-top:6px;" id="elim-assassin-explain"></div>
+  </div>
+  <div class="framework-box" style="margin-top:0.9rem;">
+    <div class="framework-name" id="elim-framework-name"></div>
+    <div class="framework-line" id="elim-framework-line"></div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-top:0.9rem;font-size:13px;color:var(--text2);line-height:1.6;">
+    You're out but stay watching — your team still needs you. Final score locked at <strong id="elim-score" style="color:var(--orange);">0</strong> pts.
+  </div>
+</div>
+
+<!-- END -->
+<div id="screen-end" class="screen">
+  <div style="text-align:center;margin-bottom:1rem;">
+    <div class="label">Game over</div>
+    <div class="score-big" id="final-score"></div>
+    <div class="score-label" id="final-label"></div>
+    <div id="end-team" class="team-badge" style="margin-top:4px;"></div>
+  </div>
+  <div class="volt-wrap"><div class="volt-car" onclick="honk('end')"><div class="speech-bubble">Beep boop I have feelings</div>VOLT_SVG_END</div></div>
+  <div class="volt-bubble" style="margin-top:0.75rem;">
+    <div class="label">VOLT Nova's closing statement</div>
+    So. That's the story. Four rounds. Four mistakes. One very public strategic death.<br><br>
+    <strong>Round 1 — SCP / Porter's 5 Forces.</strong> I entered a war zone and acted like it was a photoshoot. Industry structure decides your fate before you even show up.<br><br>
+    <strong>Round 2 — VRIO.</strong> I invented something incredible and handed it to the competition for free. Resources without protection aren't advantages. They're gifts.<br><br>
+    <strong>Round 3 — Value Creation (WTP).</strong> People loved me. They also left me. Loving a product and being stuck with it are very different things.<br><br>
+    <strong>Round 4 — Trade-offs.</strong> I was winning the wrong game, enthusiastically. You can't strategy your way out of measuring the wrong thing.<br><br>
+    <em>I wasn't beaten by better competitors. I was beaten by my own blind spots.</em><br><br>
+    <span style="color:var(--text3);">Strategy isn't about being the best. It's about being hard to beat. I was neither.</span>
+  </div>
+  <div id="round-summary"></div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ─── GAME DATA ───────────────────────────────────────────────────────────────
+const ROUNDS = [
+  {
+    badge:'Round 1 of 4', title:'The Glow-Up Era',
+    story:'I showed up to the track and I was <em>glowing</em>. New paint. New engine. I genuinely thought the other cars would see me, feel something, and politely get out of the way.<br><br>They did not get out of the way.<br><br>Fifty new cars showed up. Then a hundred. All racing the same road. All going cheaper. My beautiful price — the one I was so proud of — started getting lapped from every direction.<br><br>I thought just being the best car was enough to win the race. <em>It was not.</em>',
+    clue:'COMPETITION', pickCount:2,
+    words:['RIVALS','PRICE','PATENT','MOAT','NETWORK','SWITCH','LOYAL','BONUS','METRIC','SCALE','USERS','COST','BOARD','VALUE','BRAND','MARGIN'],
+    correct:['RIVALS','PRICE'], assassin:'SCALE',
+    framework:'SCP / Porter\'s 5 Forces',
+    frameworkLine:'Industry structure determines who wins before the race even starts. More RIVALS = direct pressure on PRICE. VOLT confused being a great product with being in a great position. They are not the same thing.',
+    assassinExplain:'SCALE sounds right — build more, win more! But scaling up into a crowded race just means losing faster at higher volume. The real problem was the RIVALS multiplying and the PRICE collapsing.',
+    reactions:{
+      right:'Yes! More RIVALS on the track meant PRICE was the first thing to get crushed. Being the fastest car means nothing when fifty others are racing cheaper. That\'s the race VOLT forgot to account for.',
+      wrong:'The answer was RIVALS + PRICE. When the track fills up with competitors, your price is always the first casualty. VOLT was so busy admiring itself it didn\'t see the grid filling up.',
+      assassin:'SCALE! Bold move. More factories, more units, dominate the market — I get it. But scaling into a price war just means you lose more, faster. RIVALS + PRICE was the answer.'
+    },
+    mood:'confident'
+  },
+  {
+    badge:'Round 2 of 4', title:'The Ego Era',
+    story:'New plan. If I can\'t out-race them, I\'ll out-build them.<br><br>So I built the greatest engine anyone had ever seen. Charges in 9 minutes. I drove it around the track once, pulled up to the mic, and said — <em>out loud, to everyone</em> — "Try and catch me now."<br><br>Three seasons later, every car on the circuit had the same engine.<br><br>I never locked the garage. Never filed the papers. Just assumed nobody would look inside. <em>They looked inside.</em> They took everything. And I stood there watching, holding a press release about an engine I no longer owned.',
+    clue:'PROTECTION', pickCount:2,
+    words:['PATENT','MOAT','RIVALS','PRICE','NETWORK','SWITCH','LOYAL','BONUS','METRIC','COPY','USERS','COST','BOARD','VALUE','SPEED','DESIGN'],
+    correct:['PATENT','MOAT'], assassin:'USERS',
+    framework:'VRIO Framework',
+    frameworkLine:'Resources must be Valuable, Rare, Inimitable, and Organised. VOLT\'s engine was V and R — but not I. Without a PATENT or a MOAT, innovation is just a free gift to whoever\'s watching.',
+    assassinExplain:'USERS feel like protection — they love me, they won\'t leave! But fans in the stands don\'t stop rivals from copying your engine. You needed legal and structural protection, not just applause.',
+    reactions:{
+      right:'Exactly. A PATENT locks the garage legally. A MOAT makes it structurally hard to copy. VOLT had neither. Built something incredible, announced it to the world, and left the door wide open.',
+      wrong:'The answer was PATENT + MOAT. Building a great engine means nothing if anyone can take it. VOLT invented, announced, and then just... let everyone help themselves.',
+      assassin:'USERS! I love the loyalty angle. But fans cheering in the stands don\'t stop rivals copying your engine in the garage. PATENT + MOAT — that\'s what locks the door.'
+    },
+    mood:'shocked'
+  },
+  {
+    badge:'Round 3 of 4', title:'The Ghosting',
+    story:'The fans loved me. Like, <em>really</em> loved me. Flags. Merchandise. Chanting my name in the stands. I thought the crowd was my biggest advantage.<br><br>Then one season the stands started emptying. Quietly. No drama, no booing. Just... fewer flags each week. Then no flags. Then empty seats.<br><br>They found another car. Moved on. Never even said goodbye. 👻<br><br>They didn\'t leave angry. They left <em>unbothered</em>. That\'s so much worse than angry.<br><br>I gave them nothing to lose by leaving. Cheering for me was effortless. Stopping was even easier.',
+    clue:'STICKINESS', pickCount:3,
+    words:['NETWORK','SWITCH','LOYAL','RIVALS','PRICE','PATENT','MOAT','BONUS','METRIC','SCALE','USERS','COST','BOARD','VALUE','BRAND','LAUNCH'],
+    correct:['NETWORK','SWITCH','LOYAL'], assassin:'COST',
+    framework:'Value Creation (WTP)',
+    frameworkLine:'Willingness-to-pay collapses when there\'s no stickiness. No NETWORK pulling friends in, no SWITCH cost making it painful to leave, no LOYALTY reward for staying. Fans who can leave effortlessly eventually will.',
+    assassinExplain:'Lower COST feels like the answer — cheaper = more fans! But price doesn\'t make fans stay. What keeps them is a NETWORK of other fans, a SWITCH cost that makes leaving feel like loss, and a LOYALTY reward worth holding onto.',
+    reactions:{
+      right:'Perfect. No NETWORK of connected fans, no SWITCH cost making it painful to go, no LOYALTY program worth keeping. VOLT was beloved and replaceable at the same time. That\'s the worst combination.',
+      wrong:'The answer was NETWORK + SWITCH + LOYAL. Being loved isn\'t enough. You need fans who\'d lose something by leaving — a community, a reward, a cost. VOLT gave them nothing to lose.',
+      assassin:'COST! Logical — lower price, more loyal fans. But fans who stay only because you\'re cheap leave the moment someone else is cheaper. NETWORK + SWITCH + LOYAL is what actually keeps them.'
+    },
+    mood:'sad'
+  },
+  {
+    badge:'Round 4 of 4', title:'The Blind Spot',
+    story:'Here is the embarrassing part. While all of this was happening — the crowded track, the copied engine, the empty stands — I was in the winner\'s circle.<br><br><em>Celebrating.</em><br><br>Trophy cabinet full. Sponsorship deals signed. There was a cake. I genuinely do not know what the cake was for.<br><br>My speedometer looked incredible. Lap times down. Fuel efficiency up. Every number I was watching was going in the right direction.<br><br>Nobody asked if we were racing on the right track.<br><br>I didn\'t lose because I stopped trying. I lost because I tried extremely hard, in exactly the wrong race, and called it winning.',
+    clue:'INCENTIVE', pickCount:2,
+    words:['BONUS','METRIC','RIVALS','PRICE','PATENT','MOAT','NETWORK','SWITCH','LOYAL','SCALE','USERS','COST','BOARD','VALUE','PIVOT','FUNDS'],
+    correct:['BONUS','METRIC'], assassin:'BOARD',
+    framework:'Trade-offs',
+    frameworkLine:'Strategy is about choosing what NOT to optimise for. Wrong METRIC + wrong BONUS = the whole team races brilliantly on the wrong track. You cannot win the right race by measuring the wrong lap times.',
+    assassinExplain:'Blaming the BOARD is satisfying — but they watched the same dashboard everyone else did. The dashboard was wrong because the METRIC was wrong. And everyone chased the METRIC because the BONUS depended on it.',
+    reactions:{
+      right:'There it is. BONUS + METRIC. The whole team was chasing the wrong lap time because that\'s what the reward pointed to. Nobody stops to ask if the track is right when the trophies keep coming.',
+      wrong:'The answer was BONUS + METRIC. When you reward the wrong race, everyone runs it brilliantly. VOLT had a perfect team running the perfect strategy on the completely wrong track.',
+      assassin:'BOARD! Very satisfying to blame. But the board trusted the numbers. The numbers were wrong because the METRIC was wrong. And the METRIC was wrong because the BONUS depended on it.'
+    },
+    mood:'smug'
+  }
+];
+const MOODS = {
+  confident:{lbrow:'rotate(-5 51 122)',rbrow:'rotate(5 169 122)',mouth:'M72 163 Q110 175 148 163',lp:[54,137],rp:[166,137],ls:[58,132],rs:[170,132],blush:0,sweat:0},
+  shocked:{lbrow:'rotate(-15 51 116)',rbrow:'rotate(15 169 116)',mouth:'M82 166 Q110 178 138 166',lp:[52,138],rp:[168,138],ls:[56,133],rs:[172,133],blush:0,sweat:0},
+  sad:{lbrow:'rotate(12 51 126)',rbrow:'rotate(-12 169 126)',mouth:'M78 170 Q110 162 142 170',lp:[52,140],rp:[168,140],ls:[56,135],rs:[172,135],blush:0,sweat:0.8},
+  smug:{lbrow:'rotate(-8 51 120)',rbrow:'rotate(8 169 120)',mouth:'M82 162 Q112 172 140 160',lp:[56,138],rp:[168,138],ls:[60,133],rs:[172,133],blush:0.4,sweat:0},
+  dead:{lbrow:'rotate(0 51 122)',rbrow:'rotate(0 169 122)',mouth:'M82 167 Q90 162 100 167 Q110 172 120 167 Q130 162 138 167',lp:[54,139],rp:[166,139],ls:[58,134],rs:[170,134],blush:0,sweat:0}
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let playerName='', teamName='', currentRound=0, score=0;
+let selectedWords=[], roundAnswered=false, roundResults=[];
+let eliminated=false, timerInterval=null, timeLeft=90;
+
+// ─── SVG HELPERS ─────────────────────────────────────────────────────────────
+function voltSVG(prefix, bodyColor='#1B4FD8'){
+  return `<svg id="svg-${prefix}" width="180" height="160" viewBox="0 0 220 190" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="110" cy="178" rx="70" ry="8" fill="#000" opacity="0.35"/>
+  <ellipse cx="68" cy="158" rx="22" ry="22" fill="#0A0A14"/>
+  <ellipse cx="68" cy="158" rx="16" ry="16" fill="${bodyColor}"/>
+  <ellipse cx="68" cy="158" rx="8" ry="8" fill="#00D4FF"/>
+  <ellipse cx="152" cy="158" rx="22" ry="22" fill="#0A0A14"/>
+  <ellipse cx="152" cy="158" rx="16" ry="16" fill="${bodyColor}"/>
+  <ellipse cx="152" cy="158" rx="8" ry="8" fill="#00D4FF"/>
+  <rect x="28" y="115" width="164" height="52" rx="14" fill="${bodyColor}"/>
+  <rect x="28" y="130" width="164" height="6" fill="#00D4FF" opacity="0.4"/>
+  <path d="M60 115 Q72 72 110 68 Q148 72 160 115 Z" fill="#1448C0"/>
+  <path d="M70 114 Q80 82 110 78 Q140 82 150 114 Z" fill="#00D4FF" opacity="0.2"/>
+  <ellipse id="${prefix}-lew" cx="52" cy="136" rx="16" ry="14" fill="white"/>
+  <ellipse id="${prefix}-lep" cx="54" cy="137" rx="9" ry="10" fill="#0A0A14"/>
+  <circle id="${prefix}-les" cx="58" cy="132" r="3" fill="white"/>
+  <ellipse id="${prefix}-rew" cx="168" cy="136" rx="16" ry="14" fill="white"/>
+  <ellipse id="${prefix}-rep" cx="166" cy="137" rx="9" ry="10" fill="#0A0A14"/>
+  <circle id="${prefix}-res" cx="170" cy="132" r="3" fill="white"/>
+  <rect id="${prefix}-lbrow" x="38" y="120" width="26" height="5" rx="3" fill="#0A2080" transform="rotate(-5 51 122)"/>
+  <rect id="${prefix}-rbrow" x="156" y="120" width="26" height="5" rx="3" fill="#0A2080" transform="rotate(5 169 122)"/>
+  <rect x="97" y="155" width="26" height="10" rx="5" fill="#0A0A14"/>
+  <rect x="101" y="157" width="6" height="6" rx="2" fill="#00D4FF" opacity="0.7"/>
+  <rect x="110" y="157" width="6" height="6" rx="2" fill="#00D4FF" opacity="0.7"/>
+  <path id="${prefix}-mouth" d="M72 163 Q110 175 148 163" stroke="#00D4FF" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <rect x="32" y="143" width="18" height="4" rx="2" fill="#FFD600" opacity="0.9"/>
+  <rect x="170" y="143" width="18" height="4" rx="2" fill="#FFD600" opacity="0.9"/>
+  <text x="110" y="150" text-anchor="middle" font-family="'Syne',sans-serif" font-weight="800" font-size="11" fill="#00D4FF" letter-spacing="3" opacity="0.9">VOLT</text>
+  <ellipse id="${prefix}-lblush" cx="36" cy="148" rx="10" ry="7" fill="#FF3CAC" opacity="0"/>
+  <ellipse id="${prefix}-rblush" cx="184" cy="148" rx="10" ry="7" fill="#FF3CAC" opacity="0"/>
+  <ellipse id="${prefix}-sweat" cx="185" cy="108" rx="5" ry="7" fill="#00D4FF" opacity="0"/>
+</svg>`;
+}
+
+function applyMood(prefix, mood){
+  const m = MOODS[mood];
+  const g = id => document.getElementById(prefix+'-'+id);
+  const lb=g('lbrow'),rb=g('rbrow'),mo=g('mouth'),lp=g('lep'),rp=g('rep'),ls=g('les'),rs=g('res'),blL=g('lblush'),blR=g('rblush'),sw=g('sweat');
+  if(!lb) return;
+  lb.setAttribute('transform',m.lbrow); rb.setAttribute('transform',m.rbrow);
+  mo.setAttribute('d',m.mouth);
+  lp.setAttribute('cx',m.lp[0]); lp.setAttribute('cy',m.lp[1]);
+  rp.setAttribute('cx',m.rp[0]); rp.setAttribute('cy',m.rp[1]);
+  lp.setAttribute('ry', mood==='dead'?3:10); rp.setAttribute('ry', mood==='dead'?3:10);
+  ls.setAttribute('cx',m.ls[0]); ls.setAttribute('cy',m.ls[1]);
+  rs.setAttribute('cx',m.rs[0]); rs.setAttribute('cy',m.rs[1]);
+  blL.setAttribute('opacity',m.blush); blR.setAttribute('opacity',m.blush);
+  sw.setAttribute('opacity',m.sweat);
+}
+
+// Inject SVGs
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('[id^="screen-"]').forEach(s=>{
+    s.innerHTML = s.innerHTML
+      .replace('VOLT_SVG_REG', voltSVG('reg'))
+      .replace('VOLT_SVG_WAIT', voltSVG('wait'))
+      .replace('VOLT_SVG_ROUND', voltSVG('round'))
+      .replace('VOLT_SVG_ELIM', voltSVG('elim','#2A1010'))
+      .replace('VOLT_SVG_END', voltSVG('end'));
+  });
+  applyMood('reg','confident');
+  applyMood('wait','smug');
+  applyMood('elim','dead');
+});
+
+// ─── HONK ────────────────────────────────────────────────────────────────────
+const HONKS=[
+  '"HONK. That\'s it. That\'s the whole message."',
+  '"$8 billion valuation. And this is how I communicate. Iconic."',
+  '"Every honk is a switching cost I forgot to build. Think about that."',
+  '"Beep boop. I am strategically deceased. Beep boop."',
+  '"I could\'ve patented the honk. I didn\'t. Classic me."',
+  '"This honk is VRIO compliant. Valuable, Rare, Inimitable, and loud."'
+];
+let hIdx=0;
+function honk(prefix){
+  const el=document.getElementById('svg-'+prefix);
+  if(el){el.style.transition='transform 0.08s';el.style.transform='scale(1.06) rotate(-3deg)';setTimeout(()=>{el.style.transform='scale(1.06) rotate(3deg)';},80);setTimeout(()=>{el.style.transform='scale(1) rotate(0)';},160);}
+}
+
+// ─── REGISTER ────────────────────────────────────────────────────────────────
+function register(){
+  const n=document.getElementById('player-name').value.trim();
+  const t=document.getElementById('team-select').value;
+  if(!n){alert('Enter your name!');return;}
+  if(!t){alert('Pick your team!');return;}
+  playerName=n; teamName=t;
+  showScreen('screen-waiting');
+  document.getElementById('waiting-name').textContent=n;
+  document.getElementById('waiting-team').textContent=t;
+  applyMood('wait','confident');
+  // Poll for game start (simulate — teacher presses start on projector)
+  // For standalone HTML: auto-start after 3s for demo
+  setTimeout(()=>startGame(),3000);
+}
+
+// ─── FIREBASE SCORE PUSH ─────────────────────────────────────────────────────
+function pushScoreToFirebase(){
+  if(!window._firebaseReady) return;
+  const db = window._fbDb;
+  const r = window._fbRef;
+  const s = window._fbSet;
+  const playerId = playerName.replace(/\s+/g,'-').toLowerCase() + '-' + Date.now();
+  const teamKey = teamName.replace(/\s+/g,'-').toLowerCase();
+  // Write this player's score under their team
+  s(r(db, 'scores/' + teamKey + '/' + playerId), {
+    player: playerName,
+    team: teamName,
+    score: score,
+    updatedAt: Date.now()
+  }).catch(e => console.warn('Firebase write failed:', e));
+}
+
+// ─── SCREENS ─────────────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ─── GAME ────────────────────────────────────────────────────────────────────
+function startGame(){
+  currentRound=0; score=0; selectedWords=[]; roundResults=[]; eliminated=false;
+  showScreen('screen-round');
+  loadRound();
+}
+
+function loadRound(){
+  const r=ROUNDS[currentRound];
+  roundAnswered=false; selectedWords=[];
+  document.getElementById('round-badge').textContent=r.badge;
+  document.getElementById('progress-fill').style.width=((currentRound/ROUNDS.length)*100)+'%';
+  document.getElementById('story-text').innerHTML='<div class="label">VOLT Nova speaking</div>'+r.story;
+  document.getElementById('clue-word').textContent=r.clue+' —';
+  document.getElementById('clue-num').textContent='Pick '+r.pickCount+' word'+(r.pickCount>1?'s':'')+' from the grid that match this clue.';
+  document.getElementById('reaction-box').innerHTML='';
+  document.getElementById('framework-box').style.display='none';
+  document.getElementById('next-wrap').style.display='none';
+  document.getElementById('grid-legend').style.display='none';
+  document.getElementById('submit-btn').disabled=true;
+  const needed=r.pickCount;
+  document.getElementById('sel-display').textContent='Pick '+needed+' word'+(needed>1?'s':'')+' to submit';
+  applyMood('round',r.mood);
+  buildGrid(r);
+  startTimer();
+}
+
+function buildGrid(r){
+  const grid=document.getElementById('word-grid');
+  grid.innerHTML='';
+  // shuffle words
+  const words=[...r.words].sort(()=>Math.random()-0.5);
+  words.forEach(w=>{
+    const el=document.createElement('div');
+    el.className='word'; el.textContent=w; el.dataset.word=w;
+    el.onclick=()=>toggleWord(el,w);
+    grid.appendChild(el);
+  });
+}
+
+function startTimer(){
+  clearInterval(timerInterval);
+  timeLeft=90;
+  updateTimerDisplay();
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    updateTimerDisplay();
+    if(timeLeft<=0){clearInterval(timerInterval);autoSubmit();}
+  },1000);
+}
+
+function updateTimerDisplay(){
+  const el=document.getElementById('timer');
+  const m=Math.floor(timeLeft/60), s=timeLeft%60;
+  el.textContent=m+':'+(s<10?'0':'')+s;
+  el.className='timer'+(timeLeft<=15?' danger':timeLeft<=30?' warning':'');
+}
+
+function autoSubmit(){
+  if(!roundAnswered){
+    if(selectedWords.length===0){
+      // penalise for not submitting
+      score-=2;
+      roundResults.push({allCorrect:false,hitAssassin:false,pts:-2,title:ROUNDS[currentRound].title,timeout:true});
+      showReaction('neutral','<strong>−2 pts.</strong> Time\'s up! You didn\'t submit anything.');
+      revealGrid();
+      showNextBtn();
+    } else {
+      submitAnswer();
+    }
+  }
+}
+
+function toggleWord(el,word){
+  if(roundAnswered) return;
+  const r=ROUNDS[currentRound];
+  if(selectedWords.includes(word)){
+    selectedWords=selectedWords.filter(w=>w!==word);
+    el.classList.remove('selected');
+  } else {
+    if(selectedWords.length>=r.pickCount) return;
+    selectedWords.push(word);
+    el.classList.add('selected');
+    el.classList.remove('word-popping');
+    void el.offsetWidth;
+    el.classList.add('word-popping');
+  }
+  const needed=r.pickCount;
+  const remaining=needed-selectedWords.length;
+  document.getElementById('submit-btn').disabled=selectedWords.length!==needed;
+  document.getElementById('sel-display').textContent=selectedWords.length
+    ?'Selected: '+selectedWords.join(', ')+(remaining>0?' · pick '+remaining+' more':' · ready!')
+    :'Pick '+needed+' words to submit';
+}
+
+function clearSelections(){
+  if(roundAnswered) return;
+  selectedWords=[];
+  document.querySelectorAll('.word').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('submit-btn').disabled=true;
+  const needed=ROUNDS[currentRound].pickCount;
+  document.getElementById('sel-display').textContent='Pick '+needed+' word'+(needed>1?'s':'')+' to submit';
+}
+
+function submitAnswer(){
+  if(roundAnswered||!selectedWords.length) return;
+  clearInterval(timerInterval);
+  roundAnswered=true;
+  const r=ROUNDS[currentRound];
+  const hitAssassin=selectedWords.includes(r.assassin);
+  const correctCount=selectedWords.filter(w=>r.correct.includes(w)).length;
+  const wrongCount=selectedWords.filter(w=>!r.correct.includes(w)&&w!==r.assassin).length;
+  const allCorrect=!hitAssassin&&correctCount===r.pickCount;
+  let pts=hitAssassin?0:(correctCount*2)-(wrongCount*1);
+  score+=pts;
+  roundResults.push({title:r.title,allCorrect,hitAssassin,pts,timeout:false});
+  pushScoreToFirebase();
+  revealGrid();
+
+  if(hitAssassin){
+    // Eliminated!
+    document.getElementById('elim-assassin-word').textContent=r.assassin;
+    document.getElementById('elim-assassin-explain').textContent=r.assassinExplain;
+    document.getElementById('elim-framework-name').textContent=r.framework;
+    document.getElementById('elim-framework-line').textContent=r.frameworkLine;
+    document.getElementById('elim-score').textContent=score;
+    pushScoreToFirebase();
+    applyMood('round','dead');
+    setTimeout(()=>{ showScreen('screen-eliminated'); applyMood('elim','dead'); },800);
+    return;
+  }
+
+  const ptLabel=pts>=0?'+'+pts:''+pts;
+  const rClass=allCorrect?'good':pts<0?'bad':'neutral';
+  const rText=allCorrect?r.reactions.right:r.reactions.wrong;
+  showReaction(rClass,'<strong>'+ptLabel+' pts.</strong> '+rText);
+  applyMood('round',allCorrect?'confident':'sad');
+
+  // Show framework
+  setTimeout(()=>{
+    document.getElementById('framework-name').textContent=r.framework;
+    document.getElementById('framework-line').textContent=r.frameworkLine;
+    document.getElementById('framework-box').style.display='block';
+  },600);
+
+  showNextBtn();
+}
+
+function revealGrid(){
+  const r=ROUNDS[currentRound];
+  document.querySelectorAll('.word').forEach(el=>{
+    const w=el.dataset.word;
+    el.classList.remove('selected');
+    if(w===r.assassin) el.classList.add('assassin');
+    else if(r.correct.includes(w)) el.classList.add('correct');
+    else if(selectedWords.includes(w)) el.classList.add('wrong');
+    el.classList.add('disabled');
+  });
+  document.getElementById('grid-legend').style.display='flex';
+  document.getElementById('submit-btn').disabled=true;
+}
+
+function showReaction(cls,html){
+  document.getElementById('reaction-box').innerHTML='<div class="reaction '+cls+'">'+html+'</div>';
+}
+
+function showNextBtn(){
+  const isLast=currentRound===ROUNDS.length-1;
+  document.getElementById('next-btn').textContent=isLast?'See my results →':'Next round →';
+  document.getElementById('next-wrap').style.display='block';
+}
+
+function nextRound(){
+  currentRound++;
+  if(currentRound>=ROUNDS.length){showEndScreen();return;}
+  loadRound();
+}
+
+function showEndScreen(){
+  showScreen('screen-end');
+  pushScoreToFirebase();
+  const max=ROUNDS.reduce((s,r)=>s+r.pickCount*2,0);
+  document.getElementById('final-score').textContent=score+' / '+max;
+  document.getElementById('end-team').textContent=teamName;
+  const pct=score/max;
+  let label;
+  if(pct>=0.85){label='You could\'ve saved me.';spawnConfetti();}
+  else if(pct>=0.6){label='Decent strategist. Not great.';}
+  else if(pct>=0.35){label='You tried. I\'m still dead.';}
+  else{label='You sped up my death. Iconic.';}
+  document.getElementById('final-label').textContent=label;
+  applyMood('end',pct>=0.6?'confident':'dead');
+
+  const summary=document.getElementById('round-summary');
+  summary.innerHTML='<div class="label" style="margin-bottom:8px;">Round by round</div>';
+  roundResults.forEach((res,i)=>{
+    const icon=res.hitAssassin?'💀':res.allCorrect?'✓':'~';
+    const iconColor=res.hitAssassin?'var(--orange)':res.allCorrect?'var(--green)':'var(--text3)';
+    const pts=res.pts>=0?'+'+res.pts:''+res.pts;
+    const note=res.hitAssassin?' · eliminated!':res.allCorrect?' · perfect!':res.timeout?' · timed out':'';
+    summary.innerHTML+=`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--dark3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;">
+      <div style="color:${iconColor};font-size:14px;flex-shrink:0;margin-top:2px;">${icon}</div>
+      <div style="font-size:13px;color:var(--text2);"><strong style="color:var(--text);">R${i+1} — ${ROUNDS[i].title}</strong><br>${pts} pts${note}</div>
+    </div>`;
+  });
+}
+
+function spawnConfetti(){
+  const colors=['#1B4FD8','#00D4FF','#FFD600','#FF3CAC','#00E676','#FF6B35','#9B5DE5'];
+  for(let i=0;i<35;i++){
+    setTimeout(()=>{
+      const c=document.createElement('div');
+      c.className='confetti-piece';
+      c.style.left=(Math.random()*100)+'vw';
+      c.style.top=(Math.random()*30+5)+'vh';
+      c.style.background=colors[Math.floor(Math.random()*colors.length)];
+      c.style.animationDelay=(Math.random()*0.4)+'s';
+      c.style.animationDuration=(Math.random()*1+1)+'s';
+      document.body.appendChild(c);
+      setTimeout(()=>c.remove(),2200);
+    },i*35);
+  }
+}
+
+// Ripple
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('.btn-primary');
+  if(!btn) return;
+  const r=document.createElement('span');
+  r.className='ripple';
+  const rect=btn.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height);
+  r.style.width=r.style.height=size+'px';
+  r.style.left=(e.clientX-rect.left-size/2)+'px';
+  r.style.top=(e.clientY-rect.top-size/2)+'px';
+  btn.appendChild(r);
+  setTimeout(()=>r.remove(),600);
+});
+</script>
+</body>
+</html>
